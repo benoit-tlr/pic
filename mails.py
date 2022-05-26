@@ -2,6 +2,7 @@ import imaplib
 import ssl
 import email
 import sys
+from fuzzywuzzy import fuzz
 
 server = 'email.isae.fr'
 
@@ -42,14 +43,40 @@ def get_mail(x):
 
 def list_mails(start, stop):
     ts = 0
+    res = []
     for x in range(max(start, 0), min(stop, i)):
-        email_message, tss = get_mail(x)
-        ts += tss
+        print("Current: " + str(x), end='\r')
+        email_message, ts = get_mail(x)
         if email_message == None:
-            print(str(x) + ": SKIPPED")
+            print('\r' + str(x) + ": SKIPPED")
             continue
         subject = str(email.header.make_header(email.header.decode_header(email_message['Subject'])))
-        print(str(x) + ": " + str(subject))
-        print("Size: " + str(ts))
+        res.append((ts, subject))
+    return res
 
-list_mails(0, 999)
+res = list_mails(0, 9999)
+matchesres = []
+blacklist = []
+for i in range(len(res)):
+    matches = [res[i]]
+    if res[i] in blacklist: continue
+    blacklist.append(res[i])
+    for j in range(len(res)):
+        if i == j: continue
+        percent = fuzz.ratio(res[i][1], res[j][1])
+        if percent > 65:
+            blacklist.append(res[j])
+            matches.append((percent, res[j]))
+    matchesres.append(matches)
+
+totalsize = 0
+for x in matchesres:
+    if len(x) <= 1: continue
+    print("----- MATCH -----")
+    print(x[0][1] + " (" + str(x[0][0]) + " KiB)")
+    totalsize += x[0][0]
+    for i in range(1, len(x)):
+        print(str(x[i][0]) + "% : " + x[i][1][1] + " (" + str(x[i][1][0]) + " KiB)")
+        totalsize += x[i][1][0]
+    print("\n\n")
+print("Total size: " + str(totalsize // 1024) + " KiB")

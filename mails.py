@@ -4,12 +4,17 @@ import email
 import sys
 from fuzzywuzzy import fuzz
 
+threshold = 55
+
 server = 'email.isae.fr'
 
 f = open('creds.txt')
 u = f.readline().strip()
 p = f.readline().strip()
 f.close()
+
+_ = input("Username: ")
+_ = input("password: ")
 
 print("Connecting to servers...", end='')
 ctx = ssl.create_default_context()
@@ -64,7 +69,7 @@ for i in range(len(res)):
     for j in range(len(res)):
         if i == j: continue
         percent = fuzz.ratio(res[i][1], res[j][1])
-        if percent > 65:
+        if percent > threshold:
             blacklist.append(res[j])
             matches.append((percent, res[j]))
     matchesres.append(matches)
